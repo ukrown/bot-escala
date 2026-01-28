@@ -1,0 +1,21 @@
+[2026-01-27 22:55:05] CONFIRMADO | 70209863942177 | Teste A1 | 21/02 | 13h
+[2026-01-27 23:00:54] CONFIRMADO | 70209863942177 | Desconhecido | Teste A1 | 27/01 Quarta | 13h
+[2026-01-27 23:06:11] CONFIRMADO | 70209863942177 | Sem nome | Teste A1 | 28/01 Quarta Feira | 13h
+[2026-01-27 23:20:51] CONFIRMADO | 70209863942177 | Sem nome | Teste A1 | 29/01 quinta | 14h|Manhã|23h
+[2026-01-27 23:22:09] RECUSADO   | 70209863942177 | Sem nome | Teste A1 | 27/09 Quarta | 13h
+[2026-01-27 23:25:16] RECUSADO   | 70209863942177 | Sem nome | Teste A1 | 23/01 | 14h
+[2026-01-27 23:27:54] RECUSADO   | 70209863942177 | Sem nome | Souza Express Teste | 23/01 | 14h
+[2026-01-27 23:32:04] RECUSADO   | 70209863942177 | Sem nome | Souza Express Teste | 23/01 | 14h
+[2026-01-27 23:33:06] CONFIRMADO | 70209863942177 | Sem nome | Souza Express Teste | 26/03 Sexta | 00h|10h|17h
+[2026-01-27 23:49:27] CONFIRMADO | 5570209863942177 | Sem nome | Souza Express Teste | 23/01 sexta | 12h
+[2026-01-27 23:52:18] CONFIRMADO | 70209863942177 | Sem nome | Souza Express Teste | 23/10 novembro | 13h
+[2026-01-27 23:53:18] RECUSADO   | 70209863942177 | Sem nome | Souza Express Teste | 23/10 | 12h
+[2026-01-27 23:54:38] CONFIRMADO | 70209863942177 | Sem nome | Souza Express Teste | 23/10 novembro | 13h
+[2026-01-28 00:10:16] RECUSADO   | 70209863942177 | Sem nome | Souza Express Teste | 23/01 sexta | 13h
+[2026-01-28 00:22:01] CONFIRMADO | 70209863942177 | Sem nome | Souza Express Teste | 21/03 sexta | 13h
+[2026-01-28 00:22:15] RECUSADO   | 70209863942177 | Sem nome | Souza Express Teste | 21/03 sexta | 13h
+[2026-01-28 00:29:05] CONFIRMADO | 108800782684179 | Sem nome | Souza Express Teste | 27/01 terça | 16:00
+[2026-01-28 00:29:12] RECUSADO   | 70209863942177 | Sem nome | Souza Express Teste | 27/01 terça | 20:00
+[2026-01-28 00:30:38] CONFIRMADO | 108800782684179 | Sem nome | Souza Express Teste | 28/01 Quarta | 12h
+[2026-01-28 00:30:43] CONFIRMADO | 70209863942177 | Sem nome | Souza Express Teste | 28/01 Quarta | 20h
+[2026-01-28 00:56:27] CONFIRMADO | 108800782684179 | Sem nome | Souza Express Teste | 23/01 | 13h
