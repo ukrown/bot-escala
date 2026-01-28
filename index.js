@@ -6,22 +6,21 @@ import makeWASocket, {
 import qrcode from 'qrcode-terminal';
 import { Boom } from '@hapi/boom';
 import fs from 'fs';
-import path from 'path';
+import http from 'http';
 
 // =========================
-// LOG
+// CONFIG
 // =========================
-const LOG_DIR = path.resolve('./logs');
-const LOG_FILE = path.join(LOG_DIR, 'confirmacoes.txt');
+const LOG_DIR = './logs';
+const LOG_FILE = `${LOG_DIR}/confirmacoes.txt`;
 
-if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
-if (!fs.existsSync(LOG_FILE)) fs.writeFileSync(LOG_FILE, '', 'utf8');
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR);
 
 // =========================
 // MEMÓRIA DE ESCALAS
 // =========================
+const escalasPendentes = {}; 
 // userJid -> { grupo, loja, data, horario, nome }
-const escalasPendentes = {};
 
 // =========================
 // BOT
@@ -57,16 +56,6 @@ async function startBot() {
   });
 
   // =========================
-  // FUNÇÃO LOG
-  // =========================
-  function registrarLog(tipo, numero, nome, loja, data, horario) {
-    const now = new Date();
-    const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
-    const linha = `[${timestamp}] ${tipo.padEnd(10)} | ${numero} | ${nome} | ${loja} | ${data} | ${horario}\n`;
-    fs.appendFileSync(LOG_FILE, linha, 'utf8');
-  }
-
-  // =========================
   // MENSAGENS
   // =========================
   sock.ev.on('messages.upsert', async ({ messages }) => {
@@ -97,9 +86,13 @@ async function startBot() {
       }
 
       const { grupo, loja, data, horario, nome } = escalasPendentes[userJid];
+
       const numeroLimpo = userJid.split('@')[0].replace('55', '');
 
+      const dataHora = new Date().toISOString();
+
       if (resposta === '1') {
+        // CONFIRMOU
         await sock.sendMessage(userJid, {
           text: '✅ Presença confirmada. Obrigado!'
         });
@@ -109,10 +102,13 @@ async function startBot() {
           mentions: [userJid]
         });
 
-        registrarLog('CONFIRMADO', userJid.split('@')[0], nome, loja, data, horario);
+        fs.appendFileSync(LOG_FILE,
+          `[${dataHora}] CONFIRMADO | ${numeroLimpo} | ${nome} | ${loja} | ${data} | ${horario}\n`
+        );
       }
 
       if (resposta === '2') {
+        // RECUSOU
         await sock.sendMessage(userJid, {
           text: '❌ Escala recusada. O supervisor será avisado.'
         });
@@ -122,7 +118,9 @@ async function startBot() {
           mentions: [userJid]
         });
 
-        registrarLog('RECUSADO', userJid.split('@')[0], nome, loja, data, horario);
+        fs.appendFileSync(LOG_FILE,
+          `[${dataHora}] RECUSADO | ${numeroLimpo} | ${nome} | ${loja} | ${data} | ${horario}\n`
+        );
       }
 
       delete escalasPendentes[userJid];
@@ -142,35 +140,29 @@ async function startBot() {
     // =========================
     if (resposta === '/regras') {
       await sock.sendMessage(from, {
-        text:
+        text: 
 `📋 REGRAS DE USO DO SISTEMA DE ESCALAS
 
-FORMATOS SUPORTADOS:
+1️⃣ Envio da escala:
+/escala DATA
 
-1️⃣ Formato tradicional:
+2️⃣ Formato por linha:
 @pessoa HORÁRIO
 
-Ex:
-@joao 16:00
-@ana 18:00
+Exemplo:
+/escala 28/01
+@joao 12:00
+@ana 13h30
 
-2️⃣ Formato por blocos:
 
-Horário 16:00
-@joao
 
-Horário 18:00
-@ana
-@jose
+4️⃣ A data pode conter texto livre:
+Ex: 28/01 Quarta-feira
+Ex: Escala Semana 01/02 a 07/02
 
-COMANDO:
-/escala DATA
-ou
-Escala DATA
-
-Confirmação:
-1️⃣ Confirmar
-2️⃣ Recusar
+5️⃣ Confirmação:
+1️⃣ Confirmar presença
+2️⃣ Recusar escala
 
 🤖 Sistema automático de escalas.`
       });
@@ -178,30 +170,18 @@ Confirmação:
     }
 
     // =========================
-    // /ESCALA  (2 FORMATOS)
+    // /ESCALA (2 FORMATOS)
     // =========================
-    if (
-      resposta.startsWith('/escala') ||
-      resposta.toLowerCase().startsWith('escala')
-    ) {
+    if (resposta.startsWith('/escala') || resposta.toLowerCase().startsWith('escala')) {
 
       const linhas = resposta.split('\n').map(l => l.trim()).filter(l => l !== '');
 
-      // =========================
-      // DATA
-      // =========================
+      // data
       let dataLinha = linhas[0];
-      if (dataLinha.toLowerCase().startsWith('/escala')) {
-        dataLinha = dataLinha.replace(/\/escala/i, '').trim();
-      }
-      if (dataLinha.toLowerCase().startsWith('escala')) {
-        dataLinha = dataLinha.replace(/escala/i, '').trim();
-      }
+      dataLinha = dataLinha.replace(/\/escala/i, '').replace(/escala/i, '').trim();
       const data = dataLinha || 'Data não informada';
 
-      // =========================
-      // LOJA
-      // =========================
+      // Loja = nome do grupo
       let loja = 'Loja não identificada';
       let participantes = {};
 
@@ -225,9 +205,7 @@ Confirmação:
       for (let i = 1; i < linhas.length; i++) {
         const linha = linhas[i];
 
-        // =========================
-        // BLOCO "Horário X"
-        // =========================
+        // Detecta "Horário X"
         const matchHorario = linha.match(regexHorarioLinha);
         if (matchHorario) {
           horarioAtual = matchHorario[1];
@@ -235,19 +213,8 @@ Confirmação:
         }
 
         let userJid = null;
-        let horario = null;
 
-        // =========================
-        // FORMATO TRADICIONAL
-        // =========================
-        if (linha.includes('@') && linha.split(' ').length > 1) {
-          const partes = linha.split(' ');
-          horario = partes.pop();
-        }
-
-        // =========================
-        // MENÇÃO
-        // =========================
+        // MENÇÃO REAL
         if (mentions[idxMention]) {
           userJid = mentions[idxMention];
           idxMention++;
@@ -255,20 +222,15 @@ Confirmação:
 
         if (!userJid) continue;
 
-        // =========================
-        // DEFINE HORÁRIO
-        // =========================
-        if (!horario && horarioAtual) {
-          horario = horarioAtual;
+        // Caso formato antigo: @pessoa 12:00
+        let horario = horarioAtual;
+        if (!horario) {
+          const partes = linha.split(' ');
+          horario = partes[partes.length - 1];
         }
-
-        if (!horario) continue;
 
         const nome = participantes[userJid] || 'Sem nome';
 
-        // =========================
-        // SALVA ESCALA
-        // =========================
         escalasPendentes[userJid] = {
           grupo: from,
           loja,
@@ -277,9 +239,6 @@ Confirmação:
           nome
         };
 
-        // =========================
-        // DM PRIVADO
-        // =========================
         const mensagemPrivada =
 `Olá 👋
 
@@ -291,7 +250,7 @@ Você foi escalado para trabalhar:
 
 🤖 Mensagem automática do sistema.
 
-📌 Responda com numero:
+📌 Responda com:
 1️⃣ Confirmar presença
 2️⃣ Recusar escala
 
@@ -299,9 +258,6 @@ Você foi escalado para trabalhar:
 
         await sock.sendMessage(userJid, { text: mensagemPrivada });
 
-        // =========================
-        // AVISO NO GRUPO
-        // =========================
         const numeroLimpo = userJid.split('@')[0].replace('55', '');
         await sock.sendMessage(from, {
           text: `📨 @${numeroLimpo} escalado para ${data} às ${horario} (${loja})`,
@@ -312,4 +268,19 @@ Você foi escalado para trabalhar:
   });
 }
 
+// =========================
+// HTTP KEEP ALIVE (RENDER)
+// =========================
+const PORT = process.env.PORT || 3000;
+
+http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Bot online');
+}).listen(PORT, () => {
+  console.log(`🌐 HTTP ativo na porta ${PORT}`);
+});
+
+// =========================
+// START
+// =========================
 startBot();
